@@ -46,7 +46,7 @@ resource "aws_vpc" "ttomczyk_vpc" {
 
 resource "aws_internet_gateway" "ttomczyk_aws_igw" {
   vpc_id = "aws_vpc.ttomczyk_vpc.id"
-  
+
   tags = {
     Name = "ttomczyk-aws-igw"
   }
@@ -124,4 +124,92 @@ resource "aws_network_interface" "aws_network_interface2" {
   tags = {
     Name = "ttomczyk_network_interface2"
   }
+}
+
+resource "aws_instance" "aws_instance1" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = ["aws_security_group.ttomczyk_ec2_security_group.id"]
+  iam_instance_profile   = "aws_iam_instance_profile.ttomczyk_aws_iam_instance_profile.name"
+
+  network_interface {
+    network_interface_id = aws_network_interface.aws_network_interface1.id
+    device_index         = 1
+  }
+
+  tags = {
+    Name  = var.instance_name_1
+    Owner = "ttomczyk"
+  }
+}
+
+resource "aws_instance" "aws_instance2" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = ["aws_security_group.ttomczyk_ec2_security_group.id"]
+  iam_instance_profile   = "aws_iam_instance_profile.ttomczyk_aws_iam_instance_profile.name"
+
+  network_interface {
+    network_interface_id = aws_network_interface.aws_network_interface2.id
+    device_index         = 2
+  }
+
+  tags = {
+    Name  = var.instance_name_2
+    Owner = "ttomczyk"
+  }
+}
+
+resource "aws_security_group" "ttomczyk_ec2_security_group" {
+  vpc_id      = "aws_vpc.ttomczyk_vpc.id"
+
+  ingress {
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = [aws_vpc.ttomczyk_vpc.cidr_block]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  tags = {
+    Name = "ttomczyk_ec2_security_group"
+  }
+}
+
+resource "aws_iam_instance_profile" "ttomczyk_aws_iam_instance_profile" {
+  name = "ttomczyk_aws_iam_instance_profile"
+  role = aws_iam_role.ttomczyk_aws_iam_role.name
+}
+
+resource "aws_iam_role" "ttomczyk_aws_iam_role" {
+  name               = "ttomczyk_aws_iam_role"
+  assume_role_policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Action = "sts:AssumeRole"
+          Effect = "Allow"
+          Sid    = ""
+          Principal = {
+            Service = "ec2.amazonaws.com"
+          }
+        }
+      ]
+    })
+
+  tags = {
+    Name = "ttomczyk-aws-iam-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "dev-resources-ssm-policy" {
+  role       = aws_iam_role.ttomczyk_aws_iam_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
