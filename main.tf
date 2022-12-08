@@ -48,12 +48,17 @@ resource "aws_internet_gateway" "int_gateway" {
   vpc_id = aws_vpc.ttomczyk_vpc.id
 
   tags = {
-    Name = "ttomczyk-aws-nat-gw"
+    Name = "ttomczyk-aws-int-gw"
   }
 }
 
+resource "aws_eip" "aws_eip" {
+  vpc = true
+}
+
 resource "aws_nat_gateway" "nat_gateway" {
-  vpc_id = aws_vpc.ttomczyk_vpc.id
+  allocation_id = aws_eip.aws_eip.id
+  subnet_id     = aws_subnet.public_subnet1.id
 
   tags = {
     Name = "ttomczyk-aws-nat-gw"
@@ -128,12 +133,12 @@ resource "aws_route_table" "aws_route_table_private" {
 
 resource "aws_route_table_association" "aws_route_table_association_public1" {
   subnet_id = aws_subnet.public_subnet1.id
-  route_table_id = aws_route_table.aws_route_table_public1.id
+  route_table_id = aws_route_table.aws_route_table_public.id
 }
 
 resource "aws_route_table_association" "aws_route_table_association_public2" {
   subnet_id = aws_subnet.public_subnet2.id
-  route_table_id = aws_route_table.aws_route_table_public1.id
+  route_table_id = aws_route_table.aws_route_table_public.id
 }
 
 resource "aws_route_table_association" "aws_route_table_association_private1" {
@@ -146,34 +151,12 @@ resource "aws_route_table_association" "aws_route_table_association_private2" {
   route_table_id = aws_route_table.aws_route_table_private.id
 }
 
-resource "aws_network_interface" "aws_network_interface1" {
-  subnet_id   = aws_subnet.public_subnet1.id
-  private_ips = ["10.0.0.100"]
-
-  tags = {
-    Name = "ttomczyk_network_interface1"
-  }
-}
-
-resource "aws_network_interface" "aws_network_interface2" {
-  subnet_id   = aws_subnet.public_subnet2.id
-  private_ips = ["10.0.0.200"]
-
-  tags = {
-    Name = "ttomczyk_network_interface2"
-  }
-}
-
 resource "aws_instance" "aws_instance1" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = "t2.micro"
   vpc_security_group_ids = [aws_security_group.ttomczyk_ec2_security_group.id]
   iam_instance_profile   = aws_iam_instance_profile.ttomczyk_aws_iam_instance_profile.name
-
-  network_interface {
-    network_interface_id = aws_network_interface.aws_network_interface1.id
-    device_index         = 1
-  }
+  subnet_id              = aws_subnet.public_subnet1.id
 
   tags = {
     Name  = var.instance_name_1
@@ -186,11 +169,7 @@ resource "aws_instance" "aws_instance2" {
   instance_type          = "t2.micro"
   vpc_security_group_ids = [aws_security_group.ttomczyk_ec2_security_group.id]
   iam_instance_profile   = aws_iam_instance_profile.ttomczyk_aws_iam_instance_profile.name
-
-  network_interface {
-    network_interface_id = aws_network_interface.aws_network_interface2.id
-    device_index         = 2
-  }
+  subnet_id              = aws_subnet.public_subnet2.id
 
   tags = {
     Name  = var.instance_name_2
