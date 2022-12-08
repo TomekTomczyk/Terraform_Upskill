@@ -44,7 +44,15 @@ resource "aws_vpc" "ttomczyk_vpc" {
   }
 }
 
-resource "aws_internet_gateway" "nat_gateway" {
+resource "aws_internet_gateway" "int_gateway" {
+  vpc_id = aws_vpc.ttomczyk_vpc.id
+
+  tags = {
+    Name = "ttomczyk-aws-nat-gw"
+  }
+}
+
+resource "aws_nat_gateway" "nat_gateway" {
   vpc_id = aws_vpc.ttomczyk_vpc.id
 
   tags = {
@@ -97,7 +105,7 @@ resource "aws_route_table" "aws_route_table_public" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.ttomczyk_aws_igw.id
+    gateway_id = aws_internet_gateway.int_gateway.id
   }
 
   tags = {
@@ -110,7 +118,7 @@ resource "aws_route_table" "aws_route_table_private" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.nat_gateway.id
+    gateway_id = aws_nat_gateway.nat_gateway.id
   }
 
   tags = {
@@ -124,7 +132,7 @@ resource "aws_route_table_association" "aws_route_table_association_public1" {
 }
 
 resource "aws_route_table_association" "aws_route_table_association_public2" {
-  subnet_id = aws_subnet.public_subnet1.id
+  subnet_id = aws_subnet.public_subnet2.id
   route_table_id = aws_route_table.aws_route_table_public1.id
 }
 
