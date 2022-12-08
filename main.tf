@@ -44,17 +44,17 @@ resource "aws_vpc" "ttomczyk_vpc" {
   }
 }
 
-resource "aws_internet_gateway" "ttomczyk_aws_igw" {
-  vpc_id = "aws_vpc.ttomczyk_vpc.id"
+resource "aws_internet_gateway" "nat_gateway" {
+  vpc_id = aws_vpc.ttomczyk_vpc.id
 
   tags = {
-    Name = "ttomczyk-aws-igw"
+    Name = "ttomczyk-aws-nat-gw"
   }
 }
 
 resource "aws_subnet" "public_subnet1" {
-  vpc_id            = "aws_vpc.ttomczyk_vpc.id"
-  cidr_block        = "10.0.0.0/20"
+  vpc_id            = aws_vpc.ttomczyk_vpc.id
+  cidr_block        = "10.0.32.0/22"
   availability_zone = "eu-west-1a"
 
   tags = {
@@ -63,8 +63,8 @@ resource "aws_subnet" "public_subnet1" {
 }
 
 resource "aws_subnet" "public_subnet2" {
-  vpc_id            = "aws_vpc.ttomczyk_vpc.id"
-  cidr_block        = "10.0.0.0/24"
+  vpc_id            = aws_vpc.ttomczyk_vpc.id
+  cidr_block        = "10.0.36.0/22"
   availability_zone = "eu-west-1b"
 
   tags = {
@@ -72,40 +72,70 @@ resource "aws_subnet" "public_subnet2" {
   }
 }
 
-resource "aws_route_table" "aws_route_table_public1" {
-  vpc_id = "aws_vpc.ttomczyk_vpc.id"
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = "aws_internet_gateway.ttomczyk_aws_igw.id"
-  }
+resource "aws_subnet" "private_subnet1" {
+  vpc_id            = aws_vpc.ttomczyk_vpc.id
+  cidr_block        = "10.0.0.0/20"
+  availability_zone = "eu-west-1a"
 
   tags = {
-    Name = "ttomczyk-aws-route-table-public1"
+    Name = "ttomczyk-tf-private-subnet1"
   }
 }
 
-resource "aws_route_table" "aws_route_table_public2" {
-  vpc_id = "aws_vpc.ttomczyk_vpc.id"
+resource "aws_subnet" "private_subnet2" {
+  vpc_id            = aws_vpc.ttomczyk_vpc.id
+  cidr_block        = "10.0.16.0/20"
+  availability_zone = "eu-west-1b"
+
+  tags = {
+    Name = "ttomczyk-tf-private-subnet2"
+  }
+}
+
+resource "aws_route_table" "aws_route_table_public" {
+  vpc_id = aws_vpc.ttomczyk_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = "aws_internet_gateway.ttomczyk_aws_igw.id"
+    gateway_id = aws_internet_gateway.ttomczyk_aws_igw.id
   }
 
   tags = {
-    Name = "ttomczyk-aws-route-table-public2"
+    Name = "ttomczyk-aws-route-table-public"
+  }
+}
+
+resource "aws_route_table" "aws_route_table_private" {
+  vpc_id = aws_vpc.ttomczyk_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.nat_gateway.id
+  }
+
+  tags = {
+    Name = "ttomczyk-aws-route-table-private"
   }
 }
 
 resource "aws_route_table_association" "aws_route_table_association_public1" {
-  subnet_id = "aws_subnet.public_subnet1.id"
-  route_table_id = "aws_route_table.aws_route_table_public1.id"
+  subnet_id = aws_subnet.public_subnet1.id
+  route_table_id = aws_route_table.aws_route_table_public1.id
 }
 
 resource "aws_route_table_association" "aws_route_table_association_public2" {
-  subnet_id = "aws_subnet.public_subnet2.id"
-  route_table_id = "aws_route_table.aws_route_table_public2.id"
+  subnet_id = aws_subnet.public_subnet1.id
+  route_table_id = aws_route_table.aws_route_table_public1.id
+}
+
+resource "aws_route_table_association" "aws_route_table_association_private1" {
+  subnet_id = aws_subnet.private_subnet1.id
+  route_table_id = aws_route_table.aws_route_table_private.id
+}
+
+resource "aws_route_table_association" "aws_route_table_association_private2" {
+  subnet_id = aws_subnet.private_subnet2.id
+  route_table_id = aws_route_table.aws_route_table_private.id
 }
 
 resource "aws_network_interface" "aws_network_interface1" {
@@ -129,8 +159,8 @@ resource "aws_network_interface" "aws_network_interface2" {
 resource "aws_instance" "aws_instance1" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = "t2.micro"
-  vpc_security_group_ids = ["aws_security_group.ttomczyk_ec2_security_group.id"]
-  iam_instance_profile   = "aws_iam_instance_profile.ttomczyk_aws_iam_instance_profile.name"
+  vpc_security_group_ids = [aws_security_group.ttomczyk_ec2_security_group.id]
+  iam_instance_profile   = aws_iam_instance_profile.ttomczyk_aws_iam_instance_profile.name
 
   network_interface {
     network_interface_id = aws_network_interface.aws_network_interface1.id
@@ -146,8 +176,8 @@ resource "aws_instance" "aws_instance1" {
 resource "aws_instance" "aws_instance2" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = "t2.micro"
-  vpc_security_group_ids = ["aws_security_group.ttomczyk_ec2_security_group.id"]
-  iam_instance_profile   = "aws_iam_instance_profile.ttomczyk_aws_iam_instance_profile.name"
+  vpc_security_group_ids = [aws_security_group.ttomczyk_ec2_security_group.id]
+  iam_instance_profile   = aws_iam_instance_profile.ttomczyk_aws_iam_instance_profile.name
 
   network_interface {
     network_interface_id = aws_network_interface.aws_network_interface2.id
@@ -161,13 +191,13 @@ resource "aws_instance" "aws_instance2" {
 }
 
 resource "aws_security_group" "ttomczyk_ec2_security_group" {
-  vpc_id      = "aws_vpc.ttomczyk_vpc.id"
+  vpc_id      = aws_vpc.ttomczyk_vpc.id
 
   ingress {
     from_port        = 80
     to_port          = 80
     protocol         = "tcp"
-    cidr_blocks      = [aws_vpc.ttomczyk_vpc.cidr_block]
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
   egress {
