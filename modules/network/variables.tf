@@ -1,0 +1,16 @@
+variable "cidr_block" {}
+variable "vpc_name" {}
+variable "int_gateway_name" {}
+variable "nat_gateway_name" {}
+variable "public_subnet1_name" {}
+variable "public_subnet2_name" {}
+variable "private_subnet1_name" {}
+variable "private_subnet2_name" {}
+variable "route_table_public_name" {}
+variable "route_table_private_name" {}
+variable "public_subnet1_cidr_block" {}
+variable "subnet1_availability_zone" {}
+variable "public_subnet2_cidr_block" {}
+variable "subnet2_availability_zone" {}
+variable "private_subnet1_cidr_block" {}
+variable "private_subnet2_cidr_block" {}
